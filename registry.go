@@ -20,8 +20,17 @@ import (
 	"sync"
 )
 
-var sessionsLock sync.RWMutex
-var sessions = make(map[SessionID]*session)
+var defaultRegistry = NewRegistry()
+
+func NewRegistry() *Registry {
+	return &Registry{sessions: make(map[SessionID]*session)}
+}
+
+type Registry struct {
+	sessionsLock sync.RWMutex
+	sessions     map[SessionID]*session
+}
+
 var errDuplicateSessionID = errors.New("Duplicate SessionID")
 var errUnknownSession = errors.New("Unknown session")
 
@@ -31,7 +40,7 @@ type Messagable interface {
 }
 
 // Send determines the session to send Messagable using header fields BeginString, TargetCompID, SenderCompID.
-func Send(m Messagable) (err error) {
+func (r *Registry) Send(m Messagable) (err error) {
 	msg := m.ToMessage()
 	var beginString FIXString
 	if err := msg.Header.GetField(tagBeginString, &beginString); err != nil {
@@ -50,13 +59,13 @@ func Send(m Messagable) (err error) {
 
 	sessionID := SessionID{BeginString: string(beginString), TargetCompID: string(targetCompID), SenderCompID: string(senderCompID)}
 
-	return SendToTarget(msg, sessionID)
+	return r.SendToTarget(msg, sessionID)
 }
 
 // SendToTarget sends a message based on the sessionID. Convenient for use in FromApp since it provides a session ID for incoming messages.
-func SendToTarget(m Messagable, sessionID SessionID) error {
+func (r *Registry) SendToTarget(m Messagable, sessionID SessionID) error {
 	msg := m.ToMessage()
-	session, ok := lookupSession(sessionID)
+	session, ok := r.lookupSession(sessionID)
 	if !ok {
 		return errUnknownSession
 	}
@@ -65,8 +74,8 @@ func SendToTarget(m Messagable, sessionID SessionID) error {
 }
 
 // ResetSession resets session's sequence numbers.
-func ResetSession(sessionID SessionID) error {
-	session, ok := lookupSession(sessionID)
+func (r *Registry) ResetSession(sessionID SessionID) error {
+	session, ok := r.lookupSession(sessionID)
 	if !ok {
 		return errUnknownSession
 	}
@@ -81,12 +90,12 @@ func ResetSession(sessionID SessionID) error {
 }
 
 // UnregisterSession removes a session from the set of known sessions.
-func UnregisterSession(sessionID SessionID) error {
-	sessionsLock.Lock()
-	defer sessionsLock.Unlock()
+func (r *Registry) UnregisterSession(sessionID SessionID) error {
+	r.sessionsLock.Lock()
+	defer r.sessionsLock.Unlock()
 
-	if _, ok := sessions[sessionID]; ok {
-		delete(sessions, sessionID)
+	if _, ok := r.sessions[sessionID]; ok {
+		delete(r.sessions, sessionID)
 		return nil
 	}
 
@@ -94,8 +103,8 @@ func UnregisterSession(sessionID SessionID) error {
 }
 
 // SetNextTargetMsgSeqNum set the next expected target message sequence number for the session matching the session id.
-func SetNextTargetMsgSeqNum(sessionID SessionID, seqNum int) error {
-	session, ok := lookupSession(sessionID)
+func (r *Registry) SetNextTargetMsgSeqNum(sessionID SessionID, seqNum int) error {
+	session, ok := r.lookupSession(sessionID)
 	if !ok {
 		return errUnknownSession
 	}
@@ -103,8 +112,8 @@ func SetNextTargetMsgSeqNum(sessionID SessionID, seqNum int) error {
 }
 
 // SetNextSenderMsgSeqNum sets the next outgoing message sequence number for the session matching the session id.
-func SetNextSenderMsgSeqNum(sessionID SessionID, seqNum int) error {
-	session, ok := lookupSession(sessionID)
+func (r *Registry) SetNextSenderMsgSeqNum(sessionID SessionID, seqNum int) error {
+	session, ok := r.lookupSession(sessionID)
 	if !ok {
 		return errUnknownSession
 	}
@@ -112,8 +121,8 @@ func SetNextSenderMsgSeqNum(sessionID SessionID, seqNum int) error {
 }
 
 // GetExpectedSenderNum retrieves the expected sender sequence number for the session matching the session id.
-func GetExpectedSenderNum(sessionID SessionID) (int, error) {
-	session, ok := lookupSession(sessionID)
+func (r *Registry) GetExpectedSenderNum(sessionID SessionID) (int, error) {
+	session, ok := r.lookupSession(sessionID)
 	if !ok {
 		return 0, errUnknownSession
 	}
@@ -121,8 +130,8 @@ func GetExpectedSenderNum(sessionID SessionID) (int, error) {
 }
 
 // GetExpectedTargetNum retrieves the next target sequence number for the session matching the session id.
-func GetExpectedTargetNum(sessionID SessionID) (int, error) {
-	session, ok := lookupSession(sessionID)
+func (r *Registry) GetExpectedTargetNum(sessionID SessionID) (int, error) {
+	session, ok := r.lookupSession(sessionID)
 	if !ok {
 		return 0, errUnknownSession
 	}
@@ -130,8 +139,8 @@ func GetExpectedTargetNum(sessionID SessionID) (int, error) {
 }
 
 // GetMessageStore returns the MessageStore interface for session matching the session id.
-func GetMessageStore(sessionID SessionID) (MessageStore, error) {
-	session, ok := lookupSession(sessionID)
+func (r *Registry) GetMessageStore(sessionID SessionID) (MessageStore, error) {
+	session, ok := r.lookupSession(sessionID)
 	if !ok {
 		return nil, errUnknownSession
 	}
@@ -139,30 +148,30 @@ func GetMessageStore(sessionID SessionID) (MessageStore, error) {
 }
 
 // GetLog returns the Log interface for session matching the session id.
-func GetLog(sessionID SessionID) (Log, error) {
-	session, ok := lookupSession(sessionID)
+func (r *Registry) GetLog(sessionID SessionID) (Log, error) {
+	session, ok := r.lookupSession(sessionID)
 	if !ok {
 		return nil, errUnknownSession
 	}
 	return session.log, nil
 }
 
-func registerSession(s *session) error {
-	sessionsLock.Lock()
-	defer sessionsLock.Unlock()
+func (r *Registry) registerSession(s *session) error {
+	r.sessionsLock.Lock()
+	defer r.sessionsLock.Unlock()
 
-	if _, ok := sessions[s.sessionID]; ok {
+	if _, ok := r.sessions[s.sessionID]; ok {
 		return errDuplicateSessionID
 	}
 
-	sessions[s.sessionID] = s
+	r.sessions[s.sessionID] = s
 	return nil
 }
 
-func lookupSession(sessionID SessionID) (s *session, ok bool) {
-	sessionsLock.RLock()
-	defer sessionsLock.RUnlock()
+func (r *Registry) lookupSession(sessionID SessionID) (s *session, ok bool) {
+	r.sessionsLock.RLock()
+	defer r.sessionsLock.RUnlock()
 
-	s, ok = sessions[sessionID]
+	s, ok = r.sessions[sessionID]
 	return
 }
