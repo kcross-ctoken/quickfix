@@ -23,8 +23,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/quickfix/config"
+	"github.com/kcross-ctoken/quickfix"
+	"github.com/kcross-ctoken/quickfix/config"
 )
 
 type sqlStoreFactory struct {

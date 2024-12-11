@@ -20,7 +20,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/quickfixgo/quickfix/config"
+	"github.com/kcross-ctoken/quickfix/config"
 
 	proxyproto "github.com/pires/go-proxyproto"
 	"github.com/stretchr/testify/assert"

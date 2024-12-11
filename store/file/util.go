@@ -20,8 +20,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/kcross-ctoken/quickfix"
 	"github.com/pkg/errors"
-	"github.com/quickfixgo/quickfix"
 )
 
 func createFilenamePrefix(s quickfix.SessionID) string {

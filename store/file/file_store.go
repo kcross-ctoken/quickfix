@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kcross-ctoken/quickfix"
+	"github.com/kcross-ctoken/quickfix/config"
 	"github.com/pkg/errors"
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/quickfix/config"
 )
 
 type fileStoreFactory struct {

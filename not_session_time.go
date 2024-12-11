@@ -15,7 +15,7 @@
 
 package quickfix
 
-import "github.com/quickfixgo/quickfix/internal"
+import "github.com/kcross-ctoken/quickfix/internal"
 
 type notSessionTime struct{ latentState }
 
