@@ -77,15 +77,23 @@ func (i *Initiator) Stop() {
 	i.wg.Wait()
 
 	for sessionID := range i.sessionSettings {
-		err := UnregisterSession(sessionID)
+		err := i.UnregisterSession(sessionID)
 		if err != nil {
 			return
 		}
 	}
 }
 
+type InitiatorOption func(*Initiator)
+
+func WithInitiatorRegistry(registry *Registry) InitiatorOption {
+	return func(i *Initiator) {
+		i.sessionFactory.Registry = registry
+	}
+}
+
 // NewInitiator creates and initializes a new Initiator.
-func NewInitiator(app Application, storeFactory MessageStoreFactory, appSettings *Settings, logFactory LogFactory) (*Initiator, error) {
+func NewInitiator(app Application, storeFactory MessageStoreFactory, appSettings *Settings, logFactory LogFactory, opts ...InitiatorOption) (*Initiator, error) {
 	i := &Initiator{
 		app:             app,
 		storeFactory:    storeFactory,
@@ -93,7 +101,11 @@ func NewInitiator(app Application, storeFactory MessageStoreFactory, appSettings
 		sessionSettings: appSettings.SessionSettings(),
 		logFactory:      logFactory,
 		sessions:        make(map[SessionID]*session),
-		sessionFactory:  sessionFactory{true},
+		sessionFactory:  sessionFactory{BuildInitiators: true, Registry: defaultRegistry},
+	}
+
+	for _, opt := range opts {
+		opt(i)
 	}
 
 	var err error
