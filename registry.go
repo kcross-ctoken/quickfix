@@ -175,3 +175,53 @@ func (r *Registry) lookupSession(sessionID SessionID) (s *session, ok bool) {
 	s, ok = r.sessions[sessionID]
 	return
 }
+
+// Send determines the session to send Messagable using header fields BeginString, TargetCompID, SenderCompID.
+func Send(m Messagable) (err error) {
+	return defaultRegistry.Send(m)
+}
+
+// SendToTarget sends a message based on the sessionID. Convenient for use in FromApp since it provides a session ID for incoming messages.
+func SendToTarget(m Messagable, sessionID SessionID) error {
+	return defaultRegistry.SendToTarget(m, sessionID)
+}
+
+// ResetSession resets session's sequence numbers.
+func ResetSession(sessionID SessionID) error {
+	return defaultRegistry.ResetSession(sessionID)
+}
+
+// UnregisterSession removes a session from the set of known sessions.
+func UnregisterSession(sessionID SessionID) error {
+	return defaultRegistry.UnregisterSession(sessionID)
+}
+
+// SetNextTargetMsgSeqNum set the next expected target message sequence number for the session matching the session id.
+func SetNextTargetMsgSeqNum(sessionID SessionID, seqNum int) error {
+	return defaultRegistry.SetNextTargetMsgSeqNum(sessionID, seqNum)
+}
+
+// SetNextSenderMsgSeqNum sets the next outgoing message sequence number for the session matching the session id.
+func SetNextSenderMsgSeqNum(sessionID SessionID, seqNum int) error {
+	return defaultRegistry.SetNextSenderMsgSeqNum(sessionID, seqNum)
+}
+
+// GetExpectedSenderNum retrieves the expected sender sequence number for the session matching the session id.
+func GetExpectedSenderNum(sessionID SessionID) (int, error) {
+	return defaultRegistry.GetExpectedSenderNum(sessionID)
+}
+
+// GetExpectedTargetNum retrieves the next target sequence number for the session matching the session id.
+func GetExpectedTargetNum(sessionID SessionID) (int, error) {
+	return defaultRegistry.GetExpectedTargetNum(sessionID)
+}
+
+// GetMessageStore returns the MessageStore interface for session matching the session id.
+func GetMessageStore(sessionID SessionID) (MessageStore, error) {
+	return defaultRegistry.GetMessageStore(sessionID)
+}
+
+// GetLog returns the Log interface for session matching the session id.
+func GetLog(sessionID SessionID) (Log, error) {
+	return defaultRegistry.GetLog(sessionID)
+}
