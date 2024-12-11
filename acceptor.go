@@ -183,6 +183,9 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		listeners:       make(map[string]net.Listener),
 	}
 	a.sessionFactory.Registry = defaultRegistry
+	for _, opt := range opts {
+		opt(a)
+	}
 
 	if a.settings.GlobalSettings().HasSetting(config.DynamicSessions) {
 		if a.dynamicSessions, err = settings.globalSettings.BoolSetting(config.DynamicSessions); err != nil {
